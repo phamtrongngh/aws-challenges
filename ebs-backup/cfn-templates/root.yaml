@@ -1,0 +1,137 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "Root stack for the EBS Backup challenge"
+
+Parameters:
+  Environment:
+    Type: String
+    Description: "Environment"
+    Default: "dev"
+
+Mappings:
+  RegionMap:
+    us-east-1:
+      AMI: "ami-09368ced5fbf0ce9e"
+
+Resources:
+  VPC:
+    Type: "AWS::EC2::VPC"
+    Properties:
+      CidrBlock: "10.0.0.0"
+
+  Subnet:
+    Type: "AWS::EC2::Subnet"
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: "10.0.0.0/24"
+      AvailabilityZone: !Select
+        - "0"
+        - !GetAZs ""
+
+  InternetGateway:
+    Type: "AWS::EC2::InternetGateway"
+
+  AttachGateway:
+    Type: "AWS::EC2::VPCGatewayAttachment"
+    Properties:
+      VpcId: !Ref VPC
+      InternetGatewayId: !Ref InternetGateway
+
+  RouteTable:
+    Type: "AWS::EC2::RouteTable"
+    Properties:
+      VpcId: !Ref VPC
+
+  Route:
+    Type: "AWS::EC2::Route"
+    DependsOn: "AttachGateway"
+    Properties:
+      RouteTableId: !Ref RouteTable
+      DestinationCidrBlock: "0.0.0.0/0"
+
+  SubnetRouteTableAssociation:
+    Type: "AWS::EC2::SubnetRouteTableAssociation"
+    Properties:
+      SubnetId: !Ref Subnet
+      RouteTableId: !Ref RouteTable
+
+  SecurityGroup:
+    Type: "AWS::EC2::SecurityGroup"
+    Properties:
+      GroupDescription: "Allow HTTP traffic"
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: "tcp"
+          FromPort: "80"
+          ToPort: "80"
+          CidrIp: "0.0.0.0/0"
+
+        - IpProtocol: "tcp"
+          FromPort: "22"
+          ToPort: "22"
+          CidrIp: "0.0.0.0/0"
+
+        - IpProtocol: "tcp"
+          FromPort: "443"
+          ToPort: "443"
+          CidrIp: "0.0.0.0/0"
+
+  EC2Instance:
+    Type: "AWS::EC2::Instance"
+    Properties:
+      InstanceType: "t2.micro"
+      ImageId: !FindInMap
+        - RegionMap
+        - !Ref "AWS::Region"
+        - AMI
+      KeyName: "cloudformation"
+      Tags:
+        - Key: "Name"
+          Value: "ebs-deep-dive"
+      UserData:
+        Fn::Base64: |
+          #!/bin/bash
+          yum update -y
+          yum install -y httpd
+          systemctl start httpd
+          systemctl enable httpd
+          echo "<h1>Hello, World!</h1>" > /var/www/html/index.html
+
+      BlockDeviceMappings:
+        - DeviceName: "/dev/xvda"
+          Ebs:
+            VolumeSize: 8
+            VolumeType: "gp2"
+            DeleteOnTermination: true
+
+        - DeviceName: "/dev/sdb"
+          Ebs:
+            VolumeSize: 8
+            VolumeType: "gp2"
+            DeleteOnTermination: true
+
+      NetworkInterfaces:
+        - DeviceIndex: "0"
+          AssociatePublicIpAddress: "true"
+          DeleteOnTermination: "true"
+          SubnetId: !Ref Subnet
+          GroupSet:
+            - !Ref SecurityGroup
+
+Outputs:
+  InstanceId:
+    Value: !Ref EC2Instance
+    Description: "Instance ID"
+    Export:
+      Name: !Sub "${Environment}-InstanceId"
+
+  PublicIp:
+    Value: !GetAtt EC2Instance.PublicIp
+    Description: "Public IP"
+    Export:
+      Name: !Sub "${Environment}-PublicIp"
+
+  PublicDnsName:
+    Value: !GetAtt EC2Instance.PublicDnsName
+    Description: "Public DNS"
+    Export:
+      Name: !Sub "${Environment}-PublicDnsName"
