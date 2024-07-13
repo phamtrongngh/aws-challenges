@@ -90,21 +90,7 @@ Resources:
           ignore_checks:
             - E1029
       AWS::CloudFormation::Init:
-        configSets:
-          default:
-            - setup
-        setup:
-          files:
-            /home/ec2-user/docker-run.sh:
-              content: |
-                #!/bin/bash
-                git clone https://github.com/phamtrongngh/aws-challenges.git /home/ec2-user/aws-challenges
-                cd /home/ec2-user/aws-challenges/ebs-backup/backend
-                docker build -t app .
-                docker run -d -p 3000:3000 -e REPO_FILE_PATH=/mnt/data/repo.txt -v /mnt/data:/mnt/data app
-              mode: "000755"
-              owner: "ec2-user"
-              group: "ec2-user"
+        config:
           commands:
             mount-secondary-ebs:
               command: |
@@ -112,8 +98,12 @@ Resources:
                 mkfs -t ext4 /dev/xvdb
                 mkdir -p /mnt/data
                 mount /dev/xvdb /mnt/data
+                chown 1000:1000 /mnt/data
                 echo '/dev/xvdb /mnt/data ext4 defaults,nofail 0 2' >> /etc/fstab
-                /home/ec2-user/docker-run.sh
+                git clone https://github.com/phamtrongngh/aws-challenges.git /home/ec2-user/aws-challenges
+                cd /home/ec2-user/aws-challenges/ebs-backup/backend
+                docker build -t app .
+                docker run -d -p 3000:3000 -e REPO_FILE_PATH=/mnt/data/repo.txt -v /mnt/data:/mnt/data app
           services:
             sysvinit:
               docker:
@@ -133,9 +123,10 @@ Resources:
         Fn::Base64: |
           #!/bin/bash
           yum update -y
-          yum install -y aws-cfn-bootstrap
-          /opt/aws/bin/cfn-init -v --stack ${AWS::StackName} --resource EC2Instance --region ${AWS::Region}
-          /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource EC2Instance --region ${AWS::Region}
+          yum update -y aws-cfn-bootstrap
+          /opt/aws/bin/cfn-init -s ${AWS::StackId} --resource EC2Instance --region ${AWS::Region} || error_exit 'Failed to run cfn-init'
+          /opt/aws/bin/cfn-hup || error_exit 'Failed to start cfn-hup'
+          /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackId} --resource EC2Instance --region ${AWS::Region}  
 
       BlockDeviceMappings:
         - DeviceName: "/dev/xvda"
