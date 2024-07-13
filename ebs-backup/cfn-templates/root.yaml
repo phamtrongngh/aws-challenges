@@ -16,7 +16,8 @@ Resources:
   VPC:
     Type: "AWS::EC2::VPC"
     Properties:
-      CidrBlock: "10.0.0.0"
+      CidrBlock: "10.0.0.0/16"
+      EnableDnsHostnames: true
 
   Subnet:
     Type: "AWS::EC2::Subnet"
@@ -46,6 +47,7 @@ Resources:
     DependsOn: "AttachGateway"
     Properties:
       RouteTableId: !Ref RouteTable
+      GatewayId: !Ref InternetGateway
       DestinationCidrBlock: "0.0.0.0/0"
 
   SubnetRouteTableAssociation:
@@ -75,8 +77,48 @@ Resources:
           ToPort: "443"
           CidrIp: "0.0.0.0/0"
 
+        - IpProtocol: "tcp"
+          FromPort: "3000"
+          ToPort: "3000"
+          CidrIp: "0.0.0.0/0"
+
   EC2Instance:
     Type: "AWS::EC2::Instance"
+    Metadata:
+      cfn-lint:
+        config:
+          ignore_checks:
+            - E1029
+      AWS::CloudFormation::Init:
+        configSets:
+          default:
+            - setup
+        setup:
+          files:
+            /home/ec2-user/docker-run.sh:
+              content: |
+                #!/bin/bash
+                git clone https://github.com/phamtrongngh/aws-challenges.git /home/ec2-user/aws-challenges
+                cd /home/ec2-user/aws-challenges/ebs-backup/backend
+                docker build -t app .
+                docker run -d -p 3000:3000 -e REPO_FILE_PATH=/mnt/data/repo.txt -v /mnt/data:/mnt/data app
+              mode: "000755"
+              owner: "ec2-user"
+              group: "ec2-user"
+          commands:
+            mount-secondary-ebs:
+              command: |
+                #!/bin/bash
+                mkfs -t ext4 /dev/xvdb
+                mkdir -p /mnt/data
+                mount /dev/xvdb /mnt/data
+                echo '/dev/xvdb /mnt/data ext4 defaults,nofail 0 2' >> /etc/fstab
+                /home/ec2-user/docker-run.sh
+          services:
+            sysvinit:
+              docker:
+                enabled: true
+                ensureRunning: true
     Properties:
       InstanceType: "t2.micro"
       ImageId: !FindInMap
@@ -91,10 +133,9 @@ Resources:
         Fn::Base64: |
           #!/bin/bash
           yum update -y
-          yum install -y httpd
-          systemctl start httpd
-          systemctl enable httpd
-          echo "<h1>Hello, World!</h1>" > /var/www/html/index.html
+          yum install -y aws-cfn-bootstrap
+          /opt/aws/bin/cfn-init -v --stack ${AWS::StackName} --resource EC2Instance --region ${AWS::Region}
+          /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource EC2Instance --region ${AWS::Region}
 
       BlockDeviceMappings:
         - DeviceName: "/dev/xvda"
@@ -103,11 +144,11 @@ Resources:
             VolumeType: "gp2"
             DeleteOnTermination: true
 
-        - DeviceName: "/dev/sdb"
+        - DeviceName: "/dev/xvdb"
           Ebs:
             VolumeSize: 8
             VolumeType: "gp2"
-            DeleteOnTermination: true
+            DeleteOnTermination: false
 
       NetworkInterfaces:
         - DeviceIndex: "0"
@@ -121,17 +162,11 @@ Outputs:
   InstanceId:
     Value: !Ref EC2Instance
     Description: "Instance ID"
-    Export:
-      Name: !Sub "${Environment}-InstanceId"
 
   PublicIp:
     Value: !GetAtt EC2Instance.PublicIp
     Description: "Public IP"
-    Export:
-      Name: !Sub "${Environment}-PublicIp"
 
   PublicDnsName:
     Value: !GetAtt EC2Instance.PublicDnsName
     Description: "Public DNS"
-    Export:
-      Name: !Sub "${Environment}-PublicDnsName"
