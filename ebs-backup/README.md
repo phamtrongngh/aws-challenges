@@ -115,7 +115,7 @@ $ export NEW_SERVER_PUBLIC_IP=$(aws cloudformation describe-stacks \
 Retrieve the stored messages from the backend server
 
 ```
-curl http://${NEW_SERVER_PUBLIC_IP}:3000
+$ curl http://${NEW_SERVER_PUBLIC_IP}:3000
 ```
 If the messages are retrieved successfully, the data has been successfully restored from the snapshot.
 
