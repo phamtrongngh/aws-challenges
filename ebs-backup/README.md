@@ -118,3 +118,16 @@ Retrieve the stored messages from the backend server
 curl http://${NEW_SERVER_PUBLIC_IP}:3000
 ```
 If the messages are retrieved successfully, the data has been successfully restored from the snapshot.
+
+### 7. Clean up
+Delete the CloudFormation stack to clean up all resources.
+
+```
+$ aws cloudformation delete-stack --stack-name $STACK_NAME
+```
+
+Note that the snapshot is not a part of the CloudFormation stack, so we need to delete the snapshot manually.
+
+```
+$ aws ec2 delete-snapshot --snapshot-id ${SNAPSHOT_ID}
+```

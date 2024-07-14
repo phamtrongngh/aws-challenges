@@ -91,7 +91,7 @@ Resources:
                 #!/bin/bash
                 systemctl enable docker
                 systemctl start docker
-                if [ "${SnapshotId}" != "" ]; then
+                if [ "${SnapshotId}" = "" ]; then
                   mkfs -t ext4 /dev/xvdb
                 fi
                 mkdir -p /mnt/data
