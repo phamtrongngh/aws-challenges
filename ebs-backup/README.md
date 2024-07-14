@@ -27,9 +27,7 @@ Create the CloudFormation stack and wait for the stack creation to complete.
 $ aws cloudformation create-stack \
     --stack-name $STACK_NAME \
     --template-body file://cfn-templates/init.yaml \
-    --capabilities CAPABILITY_NAMED_IAM \
-    --query "StackId" \
-    --output text
+    --capabilities CAPABILITY_NAMED_IAM
 ```
 
 ### 2. Test APIs
@@ -45,13 +43,13 @@ $ export SERVER_PUBLIC_IP=$(aws cloudformation describe-stacks \
 Post a message to the backend server
 
 ```
-curl -X POST -H "Content-Type: application/json" -d '{"message": "Hello, World!"}' http://${SERVER_PUBLIC_IP}:3000
+$ curl -X POST -H "Content-Type: application/json" -d '{"message": "Hello, World!"}' http://${SERVER_PUBLIC_IP}:3000
 ```
 
 Retrieve the stored messages from the backend server
 
 ```
-curl http://${SERVER_PUBLIC_IP}:3000
+$ curl http://${SERVER_PUBLIC_IP}:3000
 ```
 
 ### 3. Create a snapshot of the EBS volume to backup the data
@@ -68,7 +66,7 @@ Get the volume ID of the secondary EBS volume attached to the EC2 instance which
 ```
 $ export VOLUME_ID=$(aws ec2 describe-volumes \
     --filters Name=attachment.instance-id,Values=${INSTANCE_ID} \
-    --query "Volumes[?Attachments[0].Device == '/dev/xvdb'].VolumeId" \
+    --query "Volumes[?Attachments[0].Device == '/dev/sdb'].VolumeId" \
     --output text)
 ```
 
