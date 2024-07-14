@@ -2,15 +2,18 @@ AWSTemplateFormatVersion: "2010-09-09"
 Description: "Root stack for the EBS Backup challenge"
 
 Parameters:
-  Environment:
-    Type: String
-    Description: "Environment"
-    Default: "dev"
+  SnapshotId:
+    Type: "String"
+    Description: "The snapshot ID to restore from"
+    Default: ""
+
+Conditions:
+  HasSnapshot: !Not [!Equals [!Ref SnapshotId, ""]]
 
 Mappings:
   RegionMap:
     us-east-1:
-      AMI: "ami-09368ced5fbf0ce9e"
+      AMI: "ami-0b72821e2f351e396"
 
 Resources:
   VPC:
@@ -63,39 +66,34 @@ Resources:
       VpcId: !Ref VPC
       SecurityGroupIngress:
         - IpProtocol: "tcp"
-          FromPort: "80"
-          ToPort: "80"
-          CidrIp: "0.0.0.0/0"
-
-        - IpProtocol: "tcp"
           FromPort: "22"
           ToPort: "22"
-          CidrIp: "0.0.0.0/0"
-
-        - IpProtocol: "tcp"
-          FromPort: "443"
-          ToPort: "443"
           CidrIp: "0.0.0.0/0"
 
         - IpProtocol: "tcp"
           FromPort: "3000"
           ToPort: "3000"
           CidrIp: "0.0.0.0/0"
+          Description: "Allow HTTP traffic on port 3000 for the backend server"
 
   EC2Instance:
     Type: "AWS::EC2::Instance"
     Metadata:
-      cfn-lint:
-        config:
-          ignore_checks:
-            - E1029
       AWS::CloudFormation::Init:
         config:
+          packages:
+            yum:
+              docker: []
+              git: []
           commands:
             mount-secondary-ebs:
-              command: |
+              command: !Sub |
                 #!/bin/bash
-                mkfs -t ext4 /dev/xvdb
+                systemctl enable docker
+                systemctl start docker
+                if [ "${SnapshotId}" != "" ]; then
+                  mkfs -t ext4 /dev/xvdb
+                fi
                 mkdir -p /mnt/data
                 mount /dev/xvdb /mnt/data
                 chown 1000:1000 /mnt/data
@@ -111,22 +109,19 @@ Resources:
                 ensureRunning: true
     Properties:
       InstanceType: "t2.micro"
-      ImageId: !FindInMap
-        - RegionMap
-        - !Ref "AWS::Region"
-        - AMI
+      ImageId: !FindInMap [RegionMap, !Ref "AWS::Region", AMI]
       KeyName: "cloudformation"
       Tags:
         - Key: "Name"
           Value: "ebs-deep-dive"
       UserData:
-        Fn::Base64: |
+        Fn::Base64: !Sub |
           #!/bin/bash
           yum update -y
           yum update -y aws-cfn-bootstrap
-          /opt/aws/bin/cfn-init -s ${AWS::StackId} --resource EC2Instance --region ${AWS::Region} || error_exit 'Failed to run cfn-init'
-          /opt/aws/bin/cfn-hup || error_exit 'Failed to start cfn-hup'
-          /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackId} --resource EC2Instance --region ${AWS::Region}  
+          /opt/aws/bin/cfn-init -s ${AWS::StackId} --resource EC2Instance --region ${AWS::Region}
+          /opt/aws/bin/cfn-hup
+          /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackId} --resource EC2Instance --region ${AWS::Region}
 
       BlockDeviceMappings:
         - DeviceName: "/dev/xvda"
@@ -139,7 +134,8 @@ Resources:
           Ebs:
             VolumeSize: 8
             VolumeType: "gp2"
-            DeleteOnTermination: false
+            DeleteOnTermination: true
+            SnapshotId: !If [HasSnapshot, !Ref SnapshotId, !Ref "AWS::NoValue"]
 
       NetworkInterfaces:
         - DeviceIndex: "0"
@@ -161,3 +157,11 @@ Outputs:
   PublicDnsName:
     Value: !GetAtt EC2Instance.PublicDnsName
     Description: "Public DNS"
+
+  VPCId:
+    Value: !Ref VPC
+    Description: "VPC ID"
+
+  SubnetId:
+    Value: !Ref Subnet
+    Description: "Subnet ID"

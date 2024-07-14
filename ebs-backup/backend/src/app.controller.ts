@@ -13,12 +13,30 @@ export class AppController {
   ) {}
 
   @Post()
-  postMessage(@Body() data: PostMessageDto) {
-    this.repo.save(data.message);
+  async postMessage(@Body() data: PostMessageDto) {
+    try {
+      await this.repo.save(data.message);
+      return {
+        message: 'Message saved successfully',
+      };
+    } catch (e) {
+      return {
+        message: 'Error saving message',
+      };
+    }
   }
 
   @Get()
-  async getMessages(@Query('limit') limit: number) {
-    return this.repo.get(limit);
+  async getMessages(@Query('limit') limit: number = 10) {
+    try {
+      const messages = await this.repo.get(limit);
+      return {
+        data: messages,
+      };
+    } catch (e) {
+      return {
+        message: 'Error fetching messages',
+      };
+    }
   }
 }
