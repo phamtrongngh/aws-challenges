@@ -1,4 +1,4 @@
-# EBS Volume Management Challenge
+# EBS Backup Basic Challenge
 
 ## Objectives:
 - Write an app backend server that receives message from clients and save them to a data log file. The server should also be able to retrieve the stored messages.
