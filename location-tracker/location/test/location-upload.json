@@ -1,0 +1,17 @@
+{
+  "info": {
+    "car_sku": "MG5_002",
+    "entityId": {
+      "entityType": "DEVICE",
+      "id": "4beac0f0-eb6e-11ee-9c0c-a7e0377c6341"
+    }
+  },
+  "value": [
+    {
+      "ts": 1718425133299,
+      "longitude": "99999.99999",
+      "speedOverGround": "100",
+      "latitude": "3333.3333"
+    }
+  ]
+}

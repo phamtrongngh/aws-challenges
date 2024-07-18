@@ -1,0 +1,124 @@
+definitions:
+  model.Entity:
+    properties:
+      entityType:
+        example: DEVICE
+        type: string
+      id:
+        example: 4beac0f0-eb6e-11ee-9c0c-a7e0377c6340
+        type: string
+    type: object
+  model.Info:
+    properties:
+      car_sku:
+        example: MG5_001
+        type: string
+      entityId:
+        $ref: '#/definitions/model.Entity'
+    type: object
+  model.LocationUpdate:
+    properties:
+      info:
+        $ref: '#/definitions/model.Info'
+      value:
+        items:
+          $ref: '#/definitions/model.LocationUpdateValue'
+        type: array
+    type: object
+  model.LocationUpdateValue:
+    properties:
+      latitude:
+        example: "1038.587898"
+        type: string
+      longitude:
+        example: "10743.594002"
+        type: string
+      speedOverGround:
+        example: "0"
+        type: string
+      ts:
+        example: 1622547800
+        type: integer
+    type: object
+info:
+  contact: {}
+  title: Location API
+  version: "1.0"
+paths:
+  /v1/location:
+    post:
+      consumes:
+      - application/json
+      description: Update location
+      parameters:
+      - description: Location update
+        in: body
+        name: location
+        required: true
+        schema:
+          $ref: '#/definitions/model.LocationUpdate'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+        "500":
+          description: Internal Server Error
+      summary: Update location
+      tags:
+      - locations
+  /v1/location/{device_id}:
+    get:
+      consumes:
+      - application/json
+      description: Get the latest location for a device
+      parameters:
+      - description: Device ID
+        in: path
+        name: device_id
+        required: true
+        type: string
+      - description: Limit
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.LocationUpdateValue'
+            type: array
+        "500":
+          description: Internal Server Error
+      summary: Get latest locations
+      tags:
+      - locations
+  /v1/location/upload:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Upload location file
+      parameters:
+      - description: Location file
+        in: formData
+        name: file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+        "500":
+          description: Internal Server Error
+      summary: Upload location
+      tags:
+      - locations
+swagger: "2.0"

@@ -1,0 +1,188 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "title": "Location API",
+        "contact": {},
+        "version": "1.0"
+    },
+    "paths": {
+        "/v1/location": {
+            "post": {
+                "description": "Update location",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "locations"
+                ],
+                "summary": "Update location",
+                "parameters": [
+                    {
+                        "description": "Location update",
+                        "name": "location",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.LocationUpdate"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "400": {
+                        "description": "Bad Request"
+                    },
+                    "500": {
+                        "description": "Internal Server Error"
+                    }
+                }
+            }
+        },
+        "/v1/location/upload": {
+            "post": {
+                "description": "Upload location file",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "locations"
+                ],
+                "summary": "Upload location",
+                "parameters": [
+                    {
+                        "type": "file",
+                        "description": "Location file",
+                        "name": "file",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "400": {
+                        "description": "Bad Request"
+                    },
+                    "500": {
+                        "description": "Internal Server Error"
+                    }
+                }
+            }
+        },
+        "/v1/location/{device_id}": {
+            "get": {
+                "description": "Get the latest location for a device",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "locations"
+                ],
+                "summary": "Get latest locations",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Device ID",
+                        "name": "device_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Limit",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.LocationUpdateValue"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error"
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "model.Entity": {
+            "type": "object",
+            "properties": {
+                "entityType": {
+                    "type": "string",
+                    "example": "DEVICE"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "4beac0f0-eb6e-11ee-9c0c-a7e0377c6340"
+                }
+            }
+        },
+        "model.Info": {
+            "type": "object",
+            "properties": {
+                "car_sku": {
+                    "type": "string",
+                    "example": "MG5_001"
+                },
+                "entityId": {
+                    "$ref": "#/definitions/model.Entity"
+                }
+            }
+        },
+        "model.LocationUpdate": {
+            "type": "object",
+            "properties": {
+                "info": {
+                    "$ref": "#/definitions/model.Info"
+                },
+                "value": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.LocationUpdateValue"
+                    }
+                }
+            }
+        },
+        "model.LocationUpdateValue": {
+            "type": "object",
+            "properties": {
+                "latitude": {
+                    "type": "string",
+                    "example": "1038.587898"
+                },
+                "longitude": {
+                    "type": "string",
+                    "example": "10743.594002"
+                },
+                "speedOverGround": {
+                    "type": "string",
+                    "example": "0"
+                },
+                "ts": {
+                    "type": "integer",
+                    "example": 1622547800
+                }
+            }
+        }
+    }
+}
