@@ -84,7 +84,11 @@ Resources:
                 systemctl start docker
                 git clone https://github.com/phamtrongngh/aws-challenges.git /home/ec2-user/aws-challenges
                 cd /home/ec2-user/aws-challenges/location-tracker/location
-                docker compose up -d --build
+
+                sudo curl -L https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m) -o /usr/local/bin/docker-compose
+                sudo chmod +x /usr/local/bin/docker-compose
+                
+                docker-compose up -d --build
           services:
             sysvinit:
               docker:
