@@ -91,7 +91,7 @@ Resources:
                 enabled: true
                 ensureRunning: true
     Properties:
-      InstanceType: "t4g.medium"
+      InstanceType: "t3a.medium"
       ImageId: !FindInMap [RegionMap, !Ref "AWS::Region", AMI]
       KeyName: "cloudformation"
       UserData:

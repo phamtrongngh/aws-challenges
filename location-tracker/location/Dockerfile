@@ -16,5 +16,6 @@ FROM alpine:latest AS server
 
 COPY --from=builder /server /server
 COPY --from=builder /processor /processor
+COPY --from=builder /app/docs /docs
 
 

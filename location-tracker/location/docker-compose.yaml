@@ -20,7 +20,7 @@ services:
   server:
     build:
       context: .
-    command: sh -c "sleep 10 && /server" # Wait for kafka to start
+    command: sh -c "sleep 20 && /server" # Wait for kafka to start
     restart: always
     container_name: server
     env_file:
@@ -34,7 +34,7 @@ services:
   processor:
     build:
       context: .
-    command: sh -c "sleep 10 && /processor" # Wait for kafka to start
+    command: sh -c "sleep 20 && /processor" # Wait for kafka to start
     restart: always
     container_name: processor
     env_file:
