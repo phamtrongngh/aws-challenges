@@ -1,5 +1,11 @@
 # EBS Backup Basic Challenge
 
+![Diagram](./diagram.png)
+Source: [Educative.io](https://educative.io)
+
+## Scenario:
+You are a DevOps engineer at a startup company. The company has a backend server that receives messages from clients and saves them to a data log file. The server should also be able to retrieve the stored messages. The company wants to ensure that the data is backed up in case of any failure. Your task is to create a backup of the data stored on the EBS volume attached to the EC2 instance so that it can be restored in case of any failure.
+
 ## Objectives:
 - Write an app backend server that receives message from clients and save them to a data log file. The server should also be able to retrieve the stored messages.
 - Launch an EC2 instance using the Amazon Linux AMI.
@@ -10,6 +16,7 @@
 - Terminate the initial EC2 instance, remove the original EBS volume, and create a new volume from the snapshot.
 - Attach and mount this volume to a new EC2 instance to retrieve the stored data.
 - Clean up all resources to prevent unnecessary expenses.
+
 
 ## Steps:
 > IMPORTANT! You must install and configure your AWS CLI with the necessary credentials before proceeding with the steps below.

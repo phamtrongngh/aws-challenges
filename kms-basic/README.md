@@ -8,6 +8,9 @@ In this challenge, we will get familiar with the AWS Key Management Service (KMS
 ## Overview
 We will create a symmetric KMS key and use it to encrypt and decrypt the provided plain text file `plain.txt`. 
 
+## Scenario
+
+
 ## Steps
 ### 1. Create a symmetric KMS key
 ```bash
