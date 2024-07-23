@@ -1,19 +1,10 @@
 AWSTemplateFormatVersion: "2010-09-09"
-Description: "Root stack for the EBS Backup challenge"
+Description: "[Database Migration Basic] On-premises system"
 
 Parameters:
-  SnapshotId:
-    Type: "String"
-    Description: "The snapshot ID to restore from"
-    Default: ""
-
-Conditions:
-  HasSnapshot: !Not [!Equals [!Ref SnapshotId, ""]]
-
-Mappings:
-  RegionMap:
-    us-east-1:
-      AMI: "ami-0b72821e2f351e396"
+  AMI:
+    Type: "AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>"
+    Default: "/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2"
 
 Resources:
   VPC:
@@ -21,6 +12,9 @@ Resources:
     Properties:
       CidrBlock: "10.0.0.0/16"
       EnableDnsHostnames: true
+      Tags:
+        - Key: "Name"
+          Value: "[Database Migration Basic] On-premises VPC"
 
   Subnet:
     Type: "AWS::EC2::Subnet"
@@ -30,9 +24,16 @@ Resources:
       AvailabilityZone: !Select
         - "0"
         - !GetAZs ""
+      Tags:
+        - Key: "Name"
+          Value: "[Database Migration Basic] On-premises Subnet"
 
   InternetGateway:
     Type: "AWS::EC2::InternetGateway"
+    Properties:
+      Tags:
+        - Key: "Name"
+          Value: "[Database Migration Basic] On-premises Internet Gateway"
 
   AttachGateway:
     Type: "AWS::EC2::VPCGatewayAttachment"
@@ -40,10 +41,14 @@ Resources:
       VpcId: !Ref VPC
       InternetGatewayId: !Ref InternetGateway
 
+
   RouteTable:
     Type: "AWS::EC2::RouteTable"
     Properties:
       VpcId: !Ref VPC
+      Tags:
+        - Key: "Name"
+          Value: "[Database Migration Basic] On-premises Route Table"
 
   Route:
     Type: "AWS::EC2::Route"
@@ -62,8 +67,9 @@ Resources:
   SecurityGroup:
     Type: "AWS::EC2::SecurityGroup"
     Properties:
-      GroupDescription: "Allow HTTP traffic"
       VpcId: !Ref VPC
+      GroupDescription: "Allow SSH and PostgreSQL access"
+
       SecurityGroupIngress:
         - IpProtocol: "tcp"
           FromPort: "22"
@@ -71,12 +77,11 @@ Resources:
           CidrIp: "0.0.0.0/0"
 
         - IpProtocol: "tcp"
-          FromPort: "3000"
-          ToPort: "3000"
+          FromPort: "5432"
+          ToPort: "5432"
           CidrIp: "0.0.0.0/0"
-          Description: "Allow HTTP traffic on port 3000 for the backend server"
 
-  EC2Instance:
+  VM:
     Type: "AWS::EC2::Instance"
     Metadata:
       AWS::CloudFormation::Init:
@@ -87,55 +92,38 @@ Resources:
               git: []
           commands:
             mount-secondary-ebs:
-              command: !Sub |
+              command: |
                 #!/bin/bash
                 systemctl enable docker
                 systemctl start docker
-                if [ "${SnapshotId}" = "" ]; then
-                  mkfs -t ext4 /dev/xvdb
-                fi
-                mkdir -p /mnt/data
-                mount /dev/xvdb /mnt/data
-                chown 1000:1000 /mnt/data
-                echo '/dev/xvdb /mnt/data ext4 defaults,nofail 0 2' >> /etc/fstab
+
                 git clone https://github.com/phamtrongngh/aws-challenges.git /home/ec2-user/aws-challenges
-                cd /home/ec2-user/aws-challenges/ebs-backup/backend
-                docker build -t app .
-                docker run -d -p 3000:3000 -e REPO_FILE_PATH=/mnt/data/repo.txt -v /mnt/data:/mnt/data app
+
+                cd /home/ec2-user/aws-challenges/labs/database-migration-basic
+                docker run --name postgres \
+                  -dp 5432:5432 \
+                  -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=employees \
+                  -v $(pwd)/db.sql:/docker-entrypoint-initdb.d/db.sql \
+                  postgres:16
+
           services:
             sysvinit:
               docker:
                 enabled: true
                 ensureRunning: true
+
     Properties:
       InstanceType: "t2.micro"
-      ImageId: !FindInMap [RegionMap, !Ref "AWS::Region", AMI]
+      ImageId: !Ref AMI
       KeyName: "cloudformation"
-      Tags:
-        - Key: "Name"
-          Value: "ebs-deep-dive"
       UserData:
         Fn::Base64: !Sub |
           #!/bin/bash
           yum update -y
           yum update -y aws-cfn-bootstrap
-          /opt/aws/bin/cfn-init -s ${AWS::StackId} --resource EC2Instance --region ${AWS::Region}
+          /opt/aws/bin/cfn-init -s ${AWS::StackId} --resource VM --region ${AWS::Region}
           /opt/aws/bin/cfn-hup
-          /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackId} --resource EC2Instance --region ${AWS::Region}
-
-      BlockDeviceMappings:
-        - DeviceName: "/dev/xvda"
-          Ebs:
-            VolumeSize: 8
-            VolumeType: "gp2"
-            DeleteOnTermination: true
-
-        - DeviceName: "/dev/sdb"
-          Ebs:
-            VolumeSize: 8
-            VolumeType: "gp2"
-            DeleteOnTermination: true
-            SnapshotId: !If [HasSnapshot, !Ref SnapshotId, !Ref "AWS::NoValue"]
+          /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackId} --resource VM --region ${AWS::Region}
 
       NetworkInterfaces:
         - DeviceIndex: "0"
@@ -144,18 +132,22 @@ Resources:
           SubnetId: !Ref Subnet
           GroupSet:
             - !Ref SecurityGroup
+      
+      Tags:
+        - Key: "Name"
+          Value: "[Database Migration Basic] On-premises VM"
 
 Outputs:
   InstanceId:
-    Value: !Ref EC2Instance
+    Value: !Ref VM
     Description: "Instance ID"
 
   PublicIp:
-    Value: !GetAtt EC2Instance.PublicIp
+    Value: !GetAtt VM.PublicIp
     Description: "Public IP"
 
   PublicDnsName:
-    Value: !GetAtt EC2Instance.PublicDnsName
+    Value: !GetAtt VM.PublicDnsName
     Description: "Public DNS"
 
   VPCId:

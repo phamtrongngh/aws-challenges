@@ -16,7 +16,7 @@ We will use a PostgreSQL database running on an EC2 instance to simulate an on-p
 ```bash
 aws cloudformation create-stack --stack-name on-prem-system --template-body file://onprem.yaml
 ```
-Wait for a few seconds for the database to start and initialize the database schema and data.
+Wait for a few minutes for the CloudFormation stack to be created.
 
 ### 2. Review the on-premises PostgreSQL database
 For simplicity, we will use the `psql` command-line tool to interact with the `employees` database. Alternatively, you can use any PostgreSQL GUI tool (e.g., pgAdmin, DBeaver, TablePlus).

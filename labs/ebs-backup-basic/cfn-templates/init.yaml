@@ -1,5 +1,14 @@
 AWSTemplateFormatVersion: "2010-09-09"
-Description: "Location Tracker System"
+Description: "Root stack for the EBS Backup challenge"
+
+Parameters:
+  SnapshotId:
+    Type: "String"
+    Description: "The snapshot ID to restore from"
+    Default: ""
+
+Conditions:
+  HasSnapshot: !Not [!Equals [!Ref SnapshotId, ""]]
 
 Mappings:
   RegionMap:
@@ -62,10 +71,10 @@ Resources:
           CidrIp: "0.0.0.0/0"
 
         - IpProtocol: "tcp"
-          FromPort: "8000"
-          ToPort: "8000"
+          FromPort: "3000"
+          ToPort: "3000"
           CidrIp: "0.0.0.0/0"
-          Description: "Allow HTTP traffic on port 8000 for the backend server"
+          Description: "Allow HTTP traffic on port 3000 for the backend server"
 
   EC2Instance:
     Type: "AWS::EC2::Instance"
@@ -78,27 +87,33 @@ Resources:
               git: []
           commands:
             mount-secondary-ebs:
-              command: |
+              command: !Sub |
                 #!/bin/bash
                 systemctl enable docker
                 systemctl start docker
-                sudo curl -L https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m) -o /usr/local/bin/docker-compose
-                sudo chmod +x /usr/local/bin/docker-compose
-                
+                if [ "${SnapshotId}" = "" ]; then
+                  mkfs -t ext4 /dev/xvdb
+                fi
+                mkdir -p /mnt/data
+                mount /dev/xvdb /mnt/data
+                chown 1000:1000 /mnt/data
+                echo '/dev/xvdb /mnt/data ext4 defaults,nofail 0 2' >> /etc/fstab
                 git clone https://github.com/phamtrongngh/aws-challenges.git /home/ec2-user/aws-challenges
-                cd /home/ec2-user/aws-challenges/location-tracker/location
-
-                
-                docker-compose up -d --build
+                cd /home/ec2-user/aws-challenges/labs/ebs-backup/backend
+                docker build -t app .
+                docker run -d -p 3000:3000 -e REPO_FILE_PATH=/mnt/data/repo.txt -v /mnt/data:/mnt/data app
           services:
             sysvinit:
               docker:
                 enabled: true
                 ensureRunning: true
     Properties:
-      InstanceType: "t3a.medium"
+      InstanceType: "t2.micro"
       ImageId: !FindInMap [RegionMap, !Ref "AWS::Region", AMI]
       KeyName: "cloudformation"
+      Tags:
+        - Key: "Name"
+          Value: "ebs-deep-dive"
       UserData:
         Fn::Base64: !Sub |
           #!/bin/bash
@@ -111,9 +126,16 @@ Resources:
       BlockDeviceMappings:
         - DeviceName: "/dev/xvda"
           Ebs:
-            VolumeSize: "16"
-            VolumeType: "gp3"
-            DeleteOnTermination: "true"
+            VolumeSize: 8
+            VolumeType: "gp2"
+            DeleteOnTermination: true
+
+        - DeviceName: "/dev/sdb"
+          Ebs:
+            VolumeSize: 8
+            VolumeType: "gp2"
+            DeleteOnTermination: true
+            SnapshotId: !If [HasSnapshot, !Ref SnapshotId, !Ref "AWS::NoValue"]
 
       NetworkInterfaces:
         - DeviceIndex: "0"
@@ -122,10 +144,6 @@ Resources:
           SubnetId: !Ref Subnet
           GroupSet:
             - !Ref SecurityGroup
-
-      Tags:
-        - Key: "Name"
-          Value: "location-tracker"
 
 Outputs:
   InstanceId:

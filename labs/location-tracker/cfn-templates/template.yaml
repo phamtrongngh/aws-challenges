@@ -1,10 +1,10 @@
 AWSTemplateFormatVersion: "2010-09-09"
-Description: "[Database Migration Basic] On-premises system"
+Description: "Location Tracker System"
 
-Parameters:
-  AMI:
-    Type: "AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>"
-    Default: "/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2"
+Mappings:
+  RegionMap:
+    us-east-1:
+      AMI: "ami-0b72821e2f351e396"
 
 Resources:
   VPC:
@@ -12,9 +12,6 @@ Resources:
     Properties:
       CidrBlock: "10.0.0.0/16"
       EnableDnsHostnames: true
-      Tags:
-        - Key: "Name"
-          Value: "[Database Migration Basic] On-premises VPC"
 
   Subnet:
     Type: "AWS::EC2::Subnet"
@@ -24,16 +21,9 @@ Resources:
       AvailabilityZone: !Select
         - "0"
         - !GetAZs ""
-      Tags:
-        - Key: "Name"
-          Value: "[Database Migration Basic] On-premises Subnet"
 
   InternetGateway:
     Type: "AWS::EC2::InternetGateway"
-    Properties:
-      Tags:
-        - Key: "Name"
-          Value: "[Database Migration Basic] On-premises Internet Gateway"
 
   AttachGateway:
     Type: "AWS::EC2::VPCGatewayAttachment"
@@ -41,14 +31,10 @@ Resources:
       VpcId: !Ref VPC
       InternetGatewayId: !Ref InternetGateway
 
-
   RouteTable:
     Type: "AWS::EC2::RouteTable"
     Properties:
       VpcId: !Ref VPC
-      Tags:
-        - Key: "Name"
-          Value: "[Database Migration Basic] On-premises Route Table"
 
   Route:
     Type: "AWS::EC2::Route"
@@ -67,9 +53,8 @@ Resources:
   SecurityGroup:
     Type: "AWS::EC2::SecurityGroup"
     Properties:
+      GroupDescription: "Allow HTTP traffic"
       VpcId: !Ref VPC
-      GroupDescription: "Allow SSH and PostgreSQL access"
-
       SecurityGroupIngress:
         - IpProtocol: "tcp"
           FromPort: "22"
@@ -77,11 +62,12 @@ Resources:
           CidrIp: "0.0.0.0/0"
 
         - IpProtocol: "tcp"
-          FromPort: "5432"
-          ToPort: "5432"
+          FromPort: "8000"
+          ToPort: "8000"
           CidrIp: "0.0.0.0/0"
+          Description: "Allow HTTP traffic on port 8000 for the backend server"
 
-  VM:
+  EC2Instance:
     Type: "AWS::EC2::Instance"
     Metadata:
       AWS::CloudFormation::Init:
@@ -96,34 +82,38 @@ Resources:
                 #!/bin/bash
                 systemctl enable docker
                 systemctl start docker
-
+                sudo curl -L https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m) -o /usr/local/bin/docker-compose
+                sudo chmod +x /usr/local/bin/docker-compose
+                
                 git clone https://github.com/phamtrongngh/aws-challenges.git /home/ec2-user/aws-challenges
+                cd /home/ec2-user/aws-challenges/labs/location-tracker/location
 
-                cd /home/ec2-user/aws-challenges/database-migration-basic
-                docker run --name postgres \
-                  -dp 5432:5432 \
-                  -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=employees \
-                  -v $(pwd)/db.sql:/docker-entrypoint-initdb.d/db.sql \
-                  postgres:16
-
+                
+                docker-compose up -d --build
           services:
             sysvinit:
               docker:
                 enabled: true
                 ensureRunning: true
-
     Properties:
-      InstanceType: "t2.micro"
-      ImageId: !Ref AMI
+      InstanceType: "t3a.medium"
+      ImageId: !FindInMap [RegionMap, !Ref "AWS::Region", AMI]
       KeyName: "cloudformation"
       UserData:
         Fn::Base64: !Sub |
           #!/bin/bash
           yum update -y
           yum update -y aws-cfn-bootstrap
-          /opt/aws/bin/cfn-init -s ${AWS::StackId} --resource VM --region ${AWS::Region}
+          /opt/aws/bin/cfn-init -s ${AWS::StackId} --resource EC2Instance --region ${AWS::Region}
           /opt/aws/bin/cfn-hup
-          /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackId} --resource VM --region ${AWS::Region}
+          /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackId} --resource EC2Instance --region ${AWS::Region}
+
+      BlockDeviceMappings:
+        - DeviceName: "/dev/xvda"
+          Ebs:
+            VolumeSize: "16"
+            VolumeType: "gp3"
+            DeleteOnTermination: "true"
 
       NetworkInterfaces:
         - DeviceIndex: "0"
@@ -132,22 +122,22 @@ Resources:
           SubnetId: !Ref Subnet
           GroupSet:
             - !Ref SecurityGroup
-      
+
       Tags:
         - Key: "Name"
-          Value: "[Database Migration Basic] On-premises VM"
+          Value: "location-tracker"
 
 Outputs:
   InstanceId:
-    Value: !Ref VM
+    Value: !Ref EC2Instance
     Description: "Instance ID"
 
   PublicIp:
-    Value: !GetAtt VM.PublicIp
+    Value: !GetAtt EC2Instance.PublicIp
     Description: "Public IP"
 
   PublicDnsName:
-    Value: !GetAtt VM.PublicDnsName
+    Value: !GetAtt EC2Instance.PublicDnsName
     Description: "Public DNS"
 
   VPCId:
