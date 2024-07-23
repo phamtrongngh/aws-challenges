@@ -13,7 +13,7 @@ Labs in this repository assume that you have an AWS account and basic knowledge 
 
 
 ## Labs
-1. [EBS Backup Basic](ebs-backup-basic/README.md)
-2. [KMS Basic](kms-basic/README.md)
-3. [Database Migration Basic](database-migration-basic/README.md)
-4. [Location Tracker Sytem](location-tracker/README.md)
+1. [EBS Backup Basic](labs/ebs-backup-basic/README.md)
+2. [KMS Basic](labs/kms-basic/README.md)
+3. [Database Migration Basic](labs/database-migration-basic/README.md)
+4. [Location Tracker Sytem](labs/location-tracker/README.md)
