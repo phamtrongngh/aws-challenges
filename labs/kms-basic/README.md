@@ -1,17 +1,17 @@
 # KMS Basic Challenge
-
-In this challenge, we will get familiar with the AWS Key Management Service (KMS) and how to use it to encrypt and decrypt data. We will also learn how to use the AWS CLI to encrypt and decrypt data using KMS.
-
-## Prerequisites
-- AWS CLI installed and configured with the necessary credentials to interact with AWS services.
+Difficulty: ★ ★ ☆ ☆ ☆
 
 ## Overview
-We will create a symmetric KMS key and use it to encrypt and decrypt the provided plain text file `plain.txt`. 
+In this challenge, we will get familiar with the AWS Key Management Service (KMS) and how to use it to encrypt and decrypt data. We will also learn how to use the AWS CLI to encrypt and decrypt data using KMS.
 
 ## Scenario
-
+You have a plain text file `plain.txt` containing sensitive information that you don't want to expose to unauthorized users. You need to encrypt the content of the file using the AWS Key Management Service (KMS) to secure the data. After encrypting the file, you need to decrypt it back to the original content to verify the encryption process.
 
 ## Steps
+### 0. Prerequisites
+You need to have the following tools installed on your machine:
+- [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html), should be configured with the appropriate permissions, e.g., `AdministratorAccess`.
+
 ### 1. Create a symmetric KMS key
 ```bash
 export KEY_ID=$(aws kms create-key \

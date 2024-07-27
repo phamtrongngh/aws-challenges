@@ -1,6 +1,6 @@
 # AWS Labs for Kids
 
-![GitHub](./static//images/home.jpeg)
+![GitHub](./assets/images/home.jpeg)
 
 ## Introduction
 If you are new to AWS or want to have hands-on experience with AWS services, you are in the right place. \
@@ -11,6 +11,10 @@ Labs in this repository assume that you have an AWS account and basic knowledge 
 
 > Note that **"for Kids"** just a fun way to say that these labs are designed for everyone. Don't worry if you are not a kid, you can still follow the labs and learn AWS. :) 
 
+## Notes
+- Labs in this repository might use AWS resources that are not covered under the AWS Free Tier. Please check the pricing of the services before starting the lab.
+- Make sure to clean up the resources after completing the lab to avoid any unexpected charges.
+- Most of the labs interact with AWS services using the AWS CLI for simplicity and consistency. You can use the AWS Management Console if you prefer.
 
 ## Labs
 1. [EBS Backup Basic](labs/ebs-backup-basic/README.md)

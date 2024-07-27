@@ -1,4 +1,5 @@
 # Location Tracker System 
+Difficulty: ★ ★ ★ ★ ★
 
 ## Overview
 As an AWS SA of **iCar** - a car rental startup - you are required to design and develop a location tracker system that can track the geolocation of thousands of car GPS devices in real-time. The cars are rented out to customers who can use the iCar web app to track the location of the car they have rented. 

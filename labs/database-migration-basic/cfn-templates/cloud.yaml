@@ -1,0 +1,138 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "[Database Migration Basic] Cloud system"
+
+Resources:
+  VPC:
+    Type: "AWS::EC2::VPC"
+    Properties:
+      CidrBlock: "10.0.0.0/16"
+      EnableDnsHostnames: true
+      Tags:
+        - Key: "Name"
+          Value: "[Database Migration Basic] Cloud VPC"
+
+  SubnetA:
+    Type: "AWS::EC2::Subnet"
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: "10.0.0.0/24"
+      AvailabilityZone: !Select
+        - "0"
+        - !GetAZs ""
+      Tags:
+        - Key: "Name"
+          Value: "[Database Migration Basic] Cloud Subnet A"
+
+  SubnetB:
+    Type: "AWS::EC2::Subnet"
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: "10.0.1.0/24"
+      AvailabilityZone: !Select
+        - "1"
+        - !GetAZs ""
+      Tags:
+        - Key: "Name"
+          Value: "[Database Migration Basic] Cloud Subnet B"
+
+  InternetGateway:
+    Type: "AWS::EC2::InternetGateway"
+    Properties:
+      Tags:
+        - Key: "Name"
+          Value: "[Database Migration Basic] Cloud Internet Gateway"
+
+  AttachGateway:
+    Type: "AWS::EC2::VPCGatewayAttachment"
+    Properties:
+      VpcId: !Ref VPC
+      InternetGatewayId: !Ref InternetGateway
+
+  RouteTable:
+    Type: "AWS::EC2::RouteTable"
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: "Name"
+          Value: "[Database Migration Basic] Cloud Route Table"
+
+  Route:
+    Type: "AWS::EC2::Route"
+    DependsOn: "AttachGateway"
+    Properties:
+      RouteTableId: !Ref RouteTable
+      GatewayId: !Ref InternetGateway
+      DestinationCidrBlock: "0.0.0.0/0"
+
+  SubnetRouteTableAssociationA:
+    Type: "AWS::EC2::SubnetRouteTableAssociation"
+    Properties:
+      SubnetId: !Ref SubnetA
+      RouteTableId: !Ref RouteTable
+
+  SubnetRouteTableAssociationB:
+    Type: "AWS::EC2::SubnetRouteTableAssociation"
+    Properties:
+      SubnetId: !Ref SubnetB
+      RouteTableId: !Ref RouteTable
+
+  SecurityGroup:
+    Type: "AWS::EC2::SecurityGroup"
+    Properties:
+      VpcId: !Ref VPC
+      GroupDescription: "Allow SSH and PostgreSQL access"
+
+      SecurityGroupIngress:
+        - IpProtocol: "tcp"
+          FromPort: "5432"
+          ToPort: "5432"
+          CidrIp: "0.0.0.0/0"
+
+  RDSSubnetGroup:
+    Type: "AWS::RDS::DBSubnetGroup"
+    Properties:
+      DBSubnetGroupDescription: "[Database Migration Basic] Cloud RDS Subnet Group"
+      SubnetIds:
+        - !Ref SubnetA
+        - !Ref SubnetB
+
+  RDSInstance:
+    Type: "AWS::RDS::DBInstance"
+    Properties:
+      DBInstanceClass: "db.t4g.micro"
+      Engine: "postgres"
+      EngineVersion: "16.3"
+      DBSubnetGroupName: !Ref RDSSubnetGroup
+      MasterUsername: "postgres"
+      MasterUserPassword: "postgres"
+      AllocatedStorage: "20"
+      DBInstanceIdentifier: "lab-rds-instance"
+      PubliclyAccessible: true
+      VPCSecurityGroups:
+        - !GetAtt SecurityGroup.GroupId
+
+Outputs:
+  VPCId:
+    Value: !Ref VPC
+    Description: "VPC ID"
+    Export:
+      Name: "RDSVPCId"
+
+  RDSEndpoint:
+    Value: !GetAtt RDSInstance.Endpoint.Address
+    Description: "RDS endpoint"
+    Export:
+      Name: "RDSEndpoint"
+
+  SecurityGroupId:
+    Value: !GetAtt SecurityGroup.GroupId
+    Description: "Security group ID"
+    Export:
+      Name: "RDSSecurityGroup"
+
+  RDSSubnets:
+    Value: !Join [",", [!Ref SubnetA, !Ref SubnetB]]
+    Description: "RDS subnets"
+    Export:
+      Name: "RDSSubnets"
+

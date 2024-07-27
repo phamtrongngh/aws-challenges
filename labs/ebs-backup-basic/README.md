@@ -1,22 +1,14 @@
 # EBS Backup Basic Challenge
+Difficulty: ★ ★ ★ ☆ ☆ 
 
 ![Diagram](./diagram.png)
 Source: [Educative.io](https://educative.io)
 
+## Overview:
+In this challenge, you will learn how to create a backup of the data stored on an EBS volume attached to an EC2 instance. You will write an app backend server that receives messages from clients and saves them to a data log file. The server should also be able to retrieve the stored messages.
+
 ## Scenario:
 You are a DevOps engineer at a startup company. The company has a backend server that receives messages from clients and saves them to a data log file. The server should also be able to retrieve the stored messages. The company wants to ensure that the data is backed up in case of any failure. Your task is to create a backup of the data stored on the EBS volume attached to the EC2 instance so that it can be restored in case of any failure.
-
-## Objectives:
-- Write an app backend server that receives message from clients and save them to a data log file. The server should also be able to retrieve the stored messages.
-- Launch an EC2 instance using the Amazon Linux AMI.
-- Create and associate an EBS volume with the EC2 instance.
-- Connect to the instance via SSH.
-- Generate a file system on the EBS volume, mount it, and read/write data.
-- Create a snapshot of the EBS volume.
-- Terminate the initial EC2 instance, remove the original EBS volume, and create a new volume from the snapshot.
-- Attach and mount this volume to a new EC2 instance to retrieve the stored data.
-- Clean up all resources to prevent unnecessary expenses.
-
 
 ## Steps:
 > IMPORTANT! You must install and configure your AWS CLI with the necessary credentials before proceeding with the steps below.
@@ -37,7 +29,7 @@ $ aws cloudformation create-stack \
     --capabilities CAPABILITY_NAMED_IAM
 ```
 
-### 2. Test APIs
+### 2. Verify the backend app server
 Get the server public IP address of the backend server from the CloudFormation stack outputs:
 
 ```
@@ -58,6 +50,7 @@ Retrieve the stored messages from the backend server
 ```
 $ curl http://${SERVER_PUBLIC_IP}:3000
 ```
+If the message is retrieved successfully, the backend server is working as expected.
 
 ### 3. Create a snapshot of the EBS volume to backup the data
 Get the instance ID from the CloudFormation stack outputs:
@@ -94,6 +87,7 @@ Now the snapshot has been created, so it's safe to terminate the EC2 instance an
 ```
 $ aws ec2 terminate-instances --instance-ids ${INSTANCE_ID}
 ```
+Now the EC2 instance has been terminated, the backend server is no longer accessible, and the data is lost. However, we can restore the data from the snapshot.
 
 ### 5. Create a new EC2 instance with the snapshot of the EBS volume
 Update the CloudFormation stack with the snapshot ID to create a new EBS volume from the snapshot and attach it to a new EC2 instance.

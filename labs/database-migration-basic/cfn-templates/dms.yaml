@@ -1,0 +1,193 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "[Database Migration Basic] Database Migration Service"
+Resources:
+  # DMS needs a role to manage the VPC
+  DmsVpcRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      RoleName: "dms-vpc-role"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service: "dms.amazonaws.com"
+            Action: "sts:AssumeRole"
+      ManagedPolicyArns:
+        - "arn:aws:iam::aws:policy/service-role/AmazonDMSVPCManagementRole"
+
+  # DMS needs a role to manage CloudWatch Logs
+  DmsCloudWatchLogsRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      RoleName: "dms-cloudwatch-logs-role"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service: "dms.amazonaws.com"
+            Action: "sts:AssumeRole"
+      ManagedPolicyArns:
+        - "arn:aws:iam::aws:policy/service-role/AmazonDMSCloudWatchLogsRole"
+
+  DmsSubnetGroup:
+    Type: "AWS::DMS::ReplicationSubnetGroup"
+    Properties:
+      ReplicationSubnetGroupDescription: "[Database Migration Basic] DMS Subnet Group"
+      SubnetIds: !Split [",", !ImportValue "RDSSubnets"] # Import the Subnets from the Cloud system stack
+    DependsOn:
+      - DmsVpcRole
+
+  ReplicationInstance:
+    Type: "AWS::DMS::ReplicationInstance"
+    DependsOn:
+      - DmsVpcRole
+    Properties:
+      ReplicationInstanceIdentifier: "replication-instance"
+      AllocatedStorage: 50
+      EngineVersion: "3.5.3"
+      MultiAZ: false
+      PubliclyAccessible: true
+      ReplicationInstanceClass: "dms.t2.micro"
+      ReplicationSubnetGroupIdentifier: !Ref DmsSubnetGroup
+      VpcSecurityGroupIds: [!ImportValue "RDSSecurityGroup"] # Import the Security Group from the Cloud system stack
+
+  DmsSourceEndpoint:
+    Type: "AWS::DMS::Endpoint"
+    Properties:
+      EndpointType: "source"
+      EndpointIdentifier: "on-prem-endpoint"
+      EngineName: "postgres"
+      ServerName: !ImportValue "OnPremPublicIp"
+      DatabaseName: "employees"
+      Port: 5432
+      Password: "postgres"
+      Username: "postgres"
+
+  DmsTargetEndpoint:
+    Type: "AWS::DMS::Endpoint"
+    Properties:
+      EndpointType: "target"
+      EndpointIdentifier: "rds-cloud-endpoint"
+      EngineName: "postgres"
+      ServerName: !ImportValue "RDSEndpoint"
+      DatabaseName: "employees"
+      Port: 5432
+      Password: "postgres"
+      Username: "postgres"
+      SslMode: "require"
+
+  DmsReplicationTask:
+    Type: "AWS::DMS::ReplicationTask"
+    Properties:
+      ReplicationTaskIdentifier: "replication-task"
+      SourceEndpointArn: !Ref DmsSourceEndpoint
+      TargetEndpointArn: !Ref DmsTargetEndpoint
+      ReplicationInstanceArn: !Ref ReplicationInstance
+      MigrationType: "full-load"
+      TableMappings: |
+        {
+          "rules": [
+            {
+              "rule-type": "selection",
+              "rule-id": "1",
+              "rule-name": "1",
+              "object-locator": {
+                "schema-name": "public",
+                "table-name": "%"
+              },
+              "rule-action": "include"
+            }
+          ]
+        }
+      ReplicationTaskSettings: |
+        {
+          "FullLoadSettings": {
+              "TargetTablePrepMode": "DO_NOTHING"
+          },
+          "Logging": {
+            "EnableLogging": true,
+            "LogComponents": [
+                {
+                    "Id": "TRANSFORMATION",
+                    "Severity": "LOGGER_SEVERITY_DEFAULT"
+                },
+                {
+                    "Id": "SOURCE_UNLOAD",
+                    "Severity": "LOGGER_SEVERITY_DEFAULT"
+                },
+                {
+                    "Id": "IO",
+                    "Severity": "LOGGER_SEVERITY_DEFAULT"
+                },
+                {
+                    "Id": "TARGET_LOAD",
+                    "Severity": "LOGGER_SEVERITY_DEFAULT"
+                },
+                {
+                    "Id": "PERFORMANCE",
+                    "Severity": "LOGGER_SEVERITY_DEFAULT"
+                },
+                {
+                    "Id": "SOURCE_CAPTURE",
+                    "Severity": "LOGGER_SEVERITY_DEFAULT"
+                },
+                {
+                    "Id": "SORTER",
+                    "Severity": "LOGGER_SEVERITY_DEFAULT"
+                },
+                {
+                    "Id": "REST_SERVER",
+                    "Severity": "LOGGER_SEVERITY_DEFAULT"
+                },
+                {
+                    "Id": "VALIDATOR_EXT",
+                    "Severity": "LOGGER_SEVERITY_DEFAULT"
+                },
+                {
+                    "Id": "TARGET_APPLY",
+                    "Severity": "LOGGER_SEVERITY_DEFAULT"
+                },
+                {
+                    "Id": "TASK_MANAGER",
+                    "Severity": "LOGGER_SEVERITY_DEFAULT"
+                },
+                {
+                    "Id": "TABLES_MANAGER",
+                    "Severity": "LOGGER_SEVERITY_DEFAULT"
+                },
+                {
+                    "Id": "METADATA_MANAGER",
+                    "Severity": "LOGGER_SEVERITY_DEFAULT"
+                },
+                {
+                    "Id": "FILE_FACTORY",
+                    "Severity": "LOGGER_SEVERITY_DEFAULT"
+                },
+                {
+                    "Id": "COMMON",
+                    "Severity": "LOGGER_SEVERITY_DEFAULT"
+                },
+                {
+                    "Id": "ADDONS",
+                    "Severity": "LOGGER_SEVERITY_DEFAULT"
+                },
+                {
+                    "Id": "DATA_STRUCTURE",
+                    "Severity": "LOGGER_SEVERITY_DEFAULT"
+                },
+                {
+                    "Id": "COMMUNICATION",
+                    "Severity": "LOGGER_SEVERITY_DEFAULT"
+                },
+                {
+                    "Id": "FILE_TRANSFER",
+                    "Severity": "LOGGER_SEVERITY_DEFAULT"
+                }
+            ]
+          }
+        }
+
+    DependsOn:
+      - DmsCloudWatchLogsRole
