@@ -2,6 +2,8 @@
 
 Difficulty: ★ ★ ★ ☆ ☆
 
+![Complete Diagram](./assets/complete-diagram.png)
+
 ## Overview
 
 In this lab, you will learn how to migrate a PostgreSQL database from an on-premises environment to AWS RDS using AWS Database Migration Service (DMS).
