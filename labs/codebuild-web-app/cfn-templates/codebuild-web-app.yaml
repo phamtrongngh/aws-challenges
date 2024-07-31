@@ -122,7 +122,8 @@ Resources:
         Type: "GITHUB"
         Location: "https://github.com/phamtrongngh/aws-labs-for-kids.git"
         BuildSpec: "labs/codebuild-web-app/web-app/buildspec.yml"
-                
+        ReportBuildStatus: true
+
       TimeoutInMinutes: 30
       LogsConfig:
         CloudWatchLogs:

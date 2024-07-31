@@ -14,5 +14,20 @@ Because this lab focuses on CodeBuild, we won't cover the deployment part, e.g.,
 You need to have the following tools installed on your machine:
 - [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html), should be configured with the appropriate permissions, e.g., `AdministratorAccess`.
 
+### 1. Provision the resources
+Use the provided CloudFormation template file `cfn-templates/codebuild-web-app.yml` to provision the resources for this lab. 
+Run the following command to create the stack:
+```bash
+aws cloudformation create-stack --stack-name codebuild-web-app --template-body file://cfn-templates/codebuild-web-app.yaml --capabilities CAPABILITY_NAMED_IAM
+```
+Wait for the stack to be created successfully.
 
+After the stack is created, you will see the following resources in your AWS account:
+- CodeBuild project
+- ECR repository
 
+### 2. Start the build
+Navigate to the CodeBuild console and start the build process. You can use the AWS CLI to start the build process:
+```bash
+aws codebuild start-build --project-name codebuild-web-app
+```
