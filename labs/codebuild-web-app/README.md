@@ -5,7 +5,8 @@ Difficulty: ★ ★ ★ ☆ ☆
 In this lab, you will learn how to use AWS CodeBuild to build a simple NextJS application.
 
 ## Scenario
-You are a teach lead at a startup company that is building a new web application. You don't want your teams to spend time setting up and managing on-premises build servers like Jenkins. Instead, you want to use a fully managed build service that can scale with your team's needs. You have decided to use AWS CodeBuild to automate the build process. For the proof of concept, you will create a simple NextJS web application and configure CodeBuild to build it.
+You are a DevOps engineer at a startup company. You are tasked with automating the build process for a NextJS web application. You have decided to use AWS CodeBuild to build the app with Docker and push the image to AWS Elastic Container Registry (ECR).
+Because this lab focuses on CodeBuild, we won't cover the deployment part, e.g., deploying the image to EC2, ECS, or EKS.However, you can use the Docker image built and pushed to Docker Hub in the this lab anytime you want.
 
 ## Steps
 
@@ -13,7 +14,5 @@ You are a teach lead at a startup company that is building a new web application
 You need to have the following tools installed on your machine:
 - [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html), should be configured with the appropriate permissions, e.g., `AdministratorAccess`.
 
-### 1. Create a buildspec.yml file
-Create a file named `buildspec.yml` in the root of your project directory. This file contains the build commands that CodeBuild will run when building your project. The following is an example of a `buildspec.yml` file for a Node.js project:
-```yaml
+
 
