@@ -17,7 +17,6 @@ phases:
     commands:
       - echo "Build completed on $(date)"
       - echo "Pushing the Docker image..."
-      - docker tag web-app:latest $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/web-app:latest
-      - docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/web-app:latest
+      - docker tag web-app:latest $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/codebuild-web-app:latest
+      - docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/codebuild-web-app:latest
       - echo "Docker image pushed to Amazon ECR"
-      - echo "Image URL $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/web-app:latest"
