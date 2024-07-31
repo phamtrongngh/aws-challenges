@@ -22,3 +22,4 @@ Labs in this repository assume that you have an AWS account and basic knowledge 
 3. [Database Migration Basic](labs/database-migration-basic/README.md)
 4. [Location Tracker Sytem](labs/location-tracker/README.md)
 5. [CodeBuild Introduction](labs/codebuild-intro/README.md)
+6. [CodeBuild Web App](labs/codebuild-web-app/README.md)
