@@ -19,7 +19,7 @@ export default function Home() {
           className="text-blue-500 hover:underline"
           href="https://github.com/phamtrongngh/aws-labs-for-kids"
         >
-          AWS Labs for Kids series. Changed!
+          AWS Labs for Kids series.
         </Link>
       </p>
     </div>

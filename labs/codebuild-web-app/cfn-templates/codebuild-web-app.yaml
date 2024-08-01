@@ -55,11 +55,11 @@ Resources:
 
     # This resource allows CodeBuild to connect with Github using Personal Access Token.
   CodeBuildSourceCredential:
-      Type: AWS::CodeBuild::SourceCredential
-      Properties:
-        AuthType: PERSONAL_ACCESS_TOKEN
-        ServerType: GITHUB
-        Token: "{{resolve:ssm:/codebuild/github-token}}"
+    Type: AWS::CodeBuild::SourceCredential
+    Properties:
+      AuthType: PERSONAL_ACCESS_TOKEN
+      ServerType: GITHUB
+      Token: "{{resolve:ssm:/codebuild/github-token}}"
 
   CodeBuildProject:
     Type: "AWS::CodeBuild::Project"
@@ -102,3 +102,138 @@ Resources:
       ConcurrentBuildLimit: 1
 
     DependsOn: CodeBuildSourceCredential
+
+  VPC:
+    Type: "AWS::EC2::VPC"
+    Properties:
+      CidrBlock: "10.0.0.0/16"
+
+  Subnet:
+    Type: "AWS::EC2::Subnet"
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: "10.0.0.0/24"
+      AvailabilityZone: !Select [0, !GetAZs ""]
+
+  InternetGateway:
+    Type: "AWS::EC2::InternetGateway"
+
+  AttachGateway:
+    Type: "AWS::EC2::VPCGatewayAttachment"
+    Properties:
+      VpcId: !Ref VPC
+      InternetGatewayId: !Ref InternetGateway
+
+  RouteTable:
+    Type: "AWS::EC2::RouteTable"
+    Properties:
+      VpcId: !Ref VPC
+
+  Route:
+    Type: "AWS::EC2::Route"
+    DependsOn: "AttachGateway"
+    Properties:
+      RouteTableId: !Ref RouteTable
+      GatewayId: !Ref InternetGateway
+      DestinationCidrBlock: "0.0.0.0/0"
+
+  SubnetRouteTableAssociation:
+    Type: "AWS::EC2::SubnetRouteTableAssociation"
+    Properties:
+      SubnetId: !Ref Subnet
+      RouteTableId: !Ref RouteTable
+
+  SecurityGroup:
+    Type: "AWS::EC2::SecurityGroup"
+    Properties:
+      GroupDescription: "Allow HTTP traffic"
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: "tcp"
+          FromPort: "22"
+          ToPort: "22"
+          CidrIp: "0.0.0.0/0"
+
+        - IpProtocol: "tcp"
+          FromPort: "3000"
+          ToPort: "3000"
+          CidrIp: "0.0.0.0/0"
+          Description: "Allow HTTP traffic on port 3000 for the backend server"
+
+  EcrRoleForEC2:
+    Type: "AWS::IAM::Role"
+    Properties:
+      RoleName: "ECR-Role-For-EC2"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service: "ec2.amazonaws.com"
+            Action: "sts:AssumeRole"
+      Policies:
+        - PolicyName: "ECR-Policy-For-EC2"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: "Allow"
+                Action:
+                  - "ecr:GetAuthorizationToken"
+                  - "ecr:BatchCheckLayerAvailability"
+                  - "ecr:GetDownloadUrlForLayer"
+                  - "ecr:GetRepositoryPolicy"
+                  - "ecr:ListImages"
+                  - "ecr:DescribeRepositories"
+                  - "ecr:DescribeImages"
+                  - "ecr:BatchGetImage"
+                Resource: "*"
+
+  InstanceProfile:
+    Type: "AWS::IAM::InstanceProfile"
+    Properties:
+      Roles:
+        - !Ref EcrRoleForEC2
+
+  Instance:
+    Type: "AWS::EC2::Instance"
+    Metadata:
+      AWS::CloudFormation::Init:
+        config:
+          packages:
+            yum:
+              docker: []
+              git: []
+          commands:
+            init:
+              command: |
+                #!/bin/bash
+                systemctl enable docker
+                systemctl start docker
+          services:
+            sysvinit:
+              docker:
+                enabled: true
+                ensureRunning: true
+    Properties:
+      InstanceType: "t2.micro"
+      ImageId: "{{resolve:ssm:/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2}}"
+      KeyName: "cloudformation"
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          yum update -y
+          yum update -y aws-cfn-bootstrap
+          /opt/aws/bin/cfn-init -s ${AWS::StackId} --resource Instance --region ${AWS::Region}
+          /opt/aws/bin/cfn-hup
+          /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackId} --resource Instance --region ${AWS::Region}
+          echo "Done"
+
+      NetworkInterfaces:
+        - DeviceIndex: "0"
+          AssociatePublicIpAddress: "true"
+          DeleteOnTermination: "true"
+          SubnetId: !Ref Subnet
+          GroupSet:
+            - !Ref SecurityGroup
+
+      IamInstanceProfile: !Ref InstanceProfile
