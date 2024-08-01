@@ -5,7 +5,7 @@ Parameters:
   RepoUrl:
     Type: String
     Description: "Github Repository Location"
-    Default: "https://github.com/phamtrongngh/aws-labs-for-kids.git"
+    Default: "https://github.com/phamtrongngh/aws-labs-for-kids"
 
   RepoAppDir:
     Type: String
@@ -40,82 +40,26 @@ Resources:
               "Version": "2012-10-17",
               "Statement": [
                 {
-                  "Sid": "CloudWatchLogsPolicy",
                   "Effect": "Allow",
                   "Action": [
-                    "logs:CreateLogGroup",
-                    "logs:CreateLogStream",
-                    "logs:PutLogEvents"
-                  ],
-                  "Resource": "*"
-                },
-                {
-                  "Sid": "CodeBuildPolicy",
-                  "Effect": "Allow",
-                  "Action": [
-                    "codebuild:CreateReportGroup"
-                  ],
-                  "Resource": "*"
-                },
-                {
-                  "Sid": "S3GetObjectPolicy",
-                  "Effect": "Allow",
-                  "Action": [
-                    "s3:GetObject",
-                    "s3:GetObjectVersion"
-                  ],
-                  "Resource": "*"
-                },
-                {
-                  "Sid": "S3PutObjectPolicy",
-                  "Effect": "Allow",
-                  "Action": [
-                    "s3:PutObject"
-                  ],
-                  "Resource": "*"
-                },
-                {
-                  "Sid": "S3BucketIdentity",
-                  "Effect": "Allow",
-                  "Action": [
-                    "s3:GetBucketAcl",
-                    "s3:GetBucketLocation"
-                  ],
-                  "Resource": "*"
-                },
-                {
-                  "Sid": "CreateReportPolicy",
-                  "Effect": "Allow",
-                  "Action": "codebuild:CreateReport",
-                  "Resource": "*"
-                },
-                {
-                  "Effect": "Allow",
-                  "Action": [
-                      "codebuild:BatchPutTestCases",
-                      "codebuild:UpdateReport"
-                  ],
-                  "Resource": "*"
-                },
-                {
-                  "Effect": "Allow",
-                  "Action": [
-                    "ecr:GetAuthorizationToken",
-                    "ecr:BatchCheckLayerAvailability",
-                    "ecr:GetDownloadUrlForLayer",
-                    "ecr:BatchGetImage",
-                    "ecr:BatchDeleteImage",
-                    "ecr:CompleteLayerUpload",
-                    "ecr:DescribeImages",
-                    "ecr:DescribeRepositories",
-                    "ecr:UploadLayerPart",
-                    "ecr:InitiateLayerUpload",
-                    "ecr:PutImage"
+                    "cloudformation:*",
+                    "ecr:*",
+                    "s3:*",
+                    "logs:*",
+                    "codebuild:*"
                   ],
                   "Resource": "*"
                 }
               ]
             }
+
+    # This resource allows CodeBuild to connect with Github using Personal Access Token.
+  CodeBuildSourceCredential:
+      Type: AWS::CodeBuild::SourceCredential
+      Properties:
+        AuthType: PERSONAL_ACCESS_TOKEN
+        ServerType: GITHUB
+        Token: "{{resolve:ssm:/codebuild/github-token}}"
 
   CodeBuildProject:
     Type: "AWS::CodeBuild::Project"
@@ -141,9 +85,11 @@ Resources:
         Webhook: true
         FilterGroups:
           - - Type: EVENT
-              Pattern: PUSH
-
-          - - Type: FILE_PATH
+              Pattern: PUSH,PULL_REQUEST_MERGED
+            - Type: HEAD_REF
+              Pattern: ^refs/heads/master$
+              ExcludeMatchedPattern: false
+            - Type: FILE_PATH
               Pattern: !Sub ${RepoAppDir}/*
 
       TimeoutInMinutes: 30
@@ -154,3 +100,5 @@ Resources:
           StreamName: "CodeBuildStream"
 
       ConcurrentBuildLimit: 1
+
+    DependsOn: CodeBuildSourceCredential
