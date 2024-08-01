@@ -2,15 +2,15 @@ AWSTemplateFormatVersion: "2010-09-09"
 Description: "Codebuild Web App"
 
 Parameters:
-  CodeRepoUrl:
+  RepoUrl:
     Type: String
     Description: "Github Repository Location"
     Default: "https://github.com/phamtrongngh/aws-labs-for-kids.git"
 
-  BuildSpecFile:
+  RepoAppDir:
     Type: String
-    Description: "Build Spec file in the Repository"
-    Default: "labs/codebuild-web-app/buildspec.yml"
+    Description: "Github Repository App Directory"
+    Default: "labs/codebuild-web-app/web-app"
 
 Resources:
   EcrRepository:
@@ -133,8 +133,8 @@ Resources:
 
       Source:
         Type: "GITHUB"
-        Location: !Ref CodeRepoUrl
-        BuildSpec: !Ref BuildSpecFile
+        Location: !Ref RepoUrl
+        BuildSpec: !Sub ${RepoAppDir}/buildspec.yml
         ReportBuildStatus: true
 
       Triggers:
@@ -144,7 +144,7 @@ Resources:
               Pattern: PUSH
 
           - - Type: FILE_PATH
-              Pattern: labs/codebuild-web-app/web-app/*
+              Pattern: !Sub ${RepoAppDir}/*
 
       TimeoutInMinutes: 30
       LogsConfig:
