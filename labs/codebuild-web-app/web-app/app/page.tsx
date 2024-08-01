@@ -4,7 +4,7 @@ import Link from "next/link";
 export default function Home() {
   return (
     <div className="h-screen flex flex-col items-center justify-center">
-      <Image src="/codebuild.png" alt="Logo" width={200} height={200} />
+      <Image src="/aws.png" alt="Logo" width={200} height={200} />
       <p
         className="
           text-center
@@ -17,9 +17,9 @@ export default function Home() {
         Hello! This is a simple NextJS web app for the {" "}
         <Link
           className="text-blue-500 hover:underline"
-          href="https://github.com/phamtrongngh/aws-labs-for-kids/blob/master/labs/codebuild-web-app/README.md"
+          href="https://github.com/phamtrongngh/aws-labs-for-kids"
         >
-          {"CodeBuild lab."}
+          AWS Labs for Kids series.
         </Link>
       </p>
     </div>

@@ -1,5 +1,6 @@
 # CodeBuild Web App
 Difficulty: ★ ★ ★ ☆ ☆
+![Diagram](assets/diagram.png)
 
 ## Overview
 In this lab, you will learn how to use AWS CodeBuild to build a simple NextJS application.
